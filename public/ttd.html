@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Daftar Hadir Rapat — HUMAS SMA Negeri 1 Purwoasri</title>
+<link rel="icon" href="/assets/favicon.png">
+<link rel="stylesheet" href="/style.css">
+<style>
+body{background:radial-gradient(circle at 20% 0%,#1d4a80,var(--navy) 55%);min-height:100vh}
+.wrap{max-width:520px;margin:0 auto;padding:18px 14px 40px}
+.head{display:flex;gap:12px;align-items:center;color:#fff;margin-bottom:14px}
+.head img{width:40px}.head b{color:var(--gold);letter-spacing:.08em}
+.done{text-align:center;padding:30px 10px}
+.done .ok{width:70px;height:70px;border-radius:50%;background:#e3f5ea;color:var(--green);display:grid;place-items:center;font-size:2.2rem;margin:0 auto 12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><img src="/assets/logo-jatim.png" alt=""><div><b>HUMAS</b><div class="small" style="opacity:.85">SMA Negeri 1 Purwoasri</div></div></div>
+  <div class="card" id="box"><div class="empty">Memuat…</div></div>
+</div>
+<script type="module">
+import { sigPad, esc, tglPanjang } from '/js/core.js';
+const t = new URLSearchParams(location.search).get('t');
+const box = document.getElementById('box');
+async function load() {
+  const res = await fetch('/api/public/ttd/' + encodeURIComponent(t || ''));
+  const d = await res.json();
+  if (!res.ok) { box.innerHTML = `<div class="empty">${esc(d.error || 'Link tidak valid')}</div>`; return; }
+  const r = d.rapat;
+  const saved = localStorage.getItem('ttd_profile') ? JSON.parse(localStorage.getItem('ttd_profile')) : {};
+  if (localStorage.getItem('ttd_done_' + t)) return doneView(r, d.hadir.length);
+  if (r.status === 'final') { box.innerHTML = `<h2>${esc(r.judul)}</h2><div class="empty">Daftar hadir sudah ditutup oleh notulis.</div>`; return; }
+  box.innerHTML = `<span class="badge gold">Daftar Hadir Rapat</span><h2 style="margin-top:8px">${esc(r.judul)}</h2>
+   <p class="muted small" style="margin-top:0">${tglPanjang(r.tanggal)}${r.waktu_mulai ? ' · ' + esc(r.waktu_mulai) : ''}${r.tempat ? ' · ' + esc(r.tempat) : ''}<br>${d.hadir.length} peserta sudah mengisi</p>
+   <form id="f" class="grid" style="gap:12px">
+    <label class="f">Nama lengkap (beserta gelar) *<input name="nama" required value="${esc(saved.nama || '')}" autocomplete="name"></label>
+    <label class="f">Jabatan<input name="jabatan" value="${esc(saved.jabatan || '')}" placeholder="Guru Matematika / Wali Kelas X-3"></label>
+    <label class="f">Unsur<select name="unsur">${['', 'Kepala Sekolah', 'Wakil Kepala Sekolah', 'Guru', 'Tenaga Kependidikan', 'Komite Sekolah', 'Wali Murid', 'OSIS / Siswa', 'Tamu / Mitra'].map((u) => `<option ${u === saved.unsur ? 'selected' : ''}>${u}</option>`).join('')}</select></label>
+    <div><div class="row"><b class="small">Tanda tangan *</b><span class="spacer"></span><button type="button" class="btn sm" id="clr">Ulangi</button></div>
+    <canvas class="sigbox" style="margin-top:6px;height:220px"></canvas></div>
+    <button class="btn primary" style="justify-content:center;padding:12px" id="kirim">Kirim Kehadiran</button>
+   </form>`;
+  const pad = sigPad(box.querySelector('canvas'));
+  box.querySelector('#clr').onclick = () => pad.clear();
+  box.querySelector('#f').onsubmit = async (e) => {
+    e.preventDefault();
+    if (pad.isEmpty()) return alert('Silakan tanda tangan terlebih dahulu.');
+    const fd = Object.fromEntries(new FormData(e.target));
+    const btn = box.querySelector('#kirim'); btn.disabled = true; btn.textContent = 'Mengirim…';
+    const res = await fetch('/api/public/ttd/' + encodeURIComponent(t), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...fd, ttd: pad.toDataURL() }) });
+    const out = await res.json();
+    if (!res.ok) { alert(out.error || 'Gagal mengirim'); btn.disabled = false; btn.textContent = 'Kirim Kehadiran'; return; }
+    localStorage.setItem('ttd_profile', JSON.stringify({ nama: fd.nama, jabatan: fd.jabatan, unsur: fd.unsur }));
+    localStorage.setItem('ttd_done_' + t, '1');
+    doneView(r, d.hadir.length + 1);
+  };
+}
+function doneView(r, n) {
+  box.innerHTML = `<div class="done"><div class="ok">✓</div><h2>Terima kasih!</h2><p class="muted">Kehadiran Anda pada <b>${esc(r.judul)}</b> sudah tercatat.</p><p class="small muted">${n} peserta telah mengisi.</p><button class="btn sm" id="again">Isi untuk orang lain di HP ini</button></div>`;
+  box.querySelector('#again').onclick = () => { localStorage.removeItem('ttd_done_' + t); localStorage.removeItem('ttd_profile'); load(); };
+}
+load();
+</script>
+</body>
+</html>
