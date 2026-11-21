@@ -256,3 +256,55 @@ export async function renderUltah(canvas, o) {
   }
   footer(ctx, W, H, T, s, footH);
 }
+
+// ================= Poster prestasi =================
+function trophy(ctx, cx, cy, r, T) {
+  ctx.save();
+  const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, '#fff3c4'); g.addColorStop(0.45, T.acc); g.addColorStop(1, '#a8740b');
+  ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.arc(cx, cy, r * 1.15, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 16; i++) { ctx.save(); ctx.translate(cx, cy); ctx.rotate((i * Math.PI) / 8); ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.beginPath(); ctx.moveTo(-r * 0.12, 0); ctx.lineTo(r * 0.12, 0); ctx.lineTo(0, -r * 1.4); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle = g; ctx.strokeStyle = g; ctx.lineWidth = r * 0.09;
+  ctx.beginPath(); ctx.arc(cx - r * 0.55, cy - r * 0.35, r * 0.28, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + r * 0.55, cy - r * 0.35, r * 0.28, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - r * 0.6, cy - r * 0.72); ctx.lineTo(cx + r * 0.6, cy - r * 0.72); ctx.quadraticCurveTo(cx + r * 0.58, cy + r * 0.15, cx, cy + r * 0.28); ctx.quadraticCurveTo(cx - r * 0.58, cy + r * 0.15, cx - r * 0.6, cy - r * 0.72); ctx.fill();
+  ctx.fillRect(cx - r * 0.09, cy + r * 0.25, r * 0.18, r * 0.3);
+  rr(ctx, cx - r * 0.42, cy + r * 0.52, r * 0.84, r * 0.2, r * 0.05); ctx.fill();
+  rr(ctx, cx - r * 0.55, cy + r * 0.7, r * 1.1, r * 0.18, r * 0.05); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = `900 ${r * 0.42}px Poppins`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('★', cx, cy - r * 0.3);
+  ctx.restore();
+}
+// o: { nama, anggota[], kelas, prestasi, tingkat, tanggal, theme, format, settings, logo, foto }
+export async function renderPrestasi(canvas, o) {
+  await fonts();
+  const F = FORMATS[o.format] || FORMATS.feed; const T = THEMES[o.theme] || THEMES.navy; const s = o.settings;
+  const W = F.w, H = F.h; canvas.width = W; canvas.height = H; const ctx = canvas.getContext('2d');
+  const story = o.format === 'story', sq = o.format === 'square';
+  background(ctx, W, H, T, null);
+  header(ctx, W, T, o.logo, s, story ? 120 : 56, sq ? 0.8 : 0.9);
+  let y = story ? 520 : sq ? 200 : 240;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = T.acc; ctx.font = `italic 700 ${sq ? 56 : story ? 86 : 70}px "Playfair Display"`; ctx.fillText('Selamat & Sukses', W / 2, y);
+  const R = sq ? 120 : story ? 210 : 160; const cy = y + (sq ? 40 : 60) + R;
+  if (o.foto) {
+    ctx.save(); ctx.beginPath(); ctx.arc(W / 2, cy, R + 14, 0, Math.PI * 2); ctx.fillStyle = T.acc; ctx.fill(); ctx.beginPath(); ctx.arc(W / 2, cy, R, 0, Math.PI * 2); ctx.clip();
+    const sc = Math.max((2 * R) / o.foto.width, (2 * R) / o.foto.height); ctx.drawImage(o.foto, W / 2 - (o.foto.width * sc) / 2, cy - (o.foto.height * sc) / 2.4, o.foto.width * sc, o.foto.height * sc); ctx.restore();
+    trophy(ctx, W / 2 + R * 0.8, cy + R * 0.7, R * 0.32, T);
+  } else trophy(ctx, W / 2, cy, R, T);
+  y = cy + R + (sq ? 70 : story ? 120 : 92);
+  ctx.textAlign = 'left'; const t = fitTitle(ctx, o.nama.toUpperCase(), W - 160, 2, sq ? 54 : story ? 74 : 62, 30); ctx.textAlign = 'center';
+  ctx.fillStyle = T.ink; ctx.font = `900 ${t.size}px Poppins`; t.lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * t.size * 1.1)); y += (t.lines.length - 1) * t.size * 1.1;
+  const sub = [o.kelas && 'Kelas ' + o.kelas, o.anggota && o.anggota.length ? o.anggota.length + ' anggota tim' : ''].filter(Boolean).join(' · ');
+  if (sub) { y += sq ? 40 : 48; ctx.fillStyle = T.sub; ctx.font = `600 ${sq ? 26 : 30}px Poppins`; ctx.fillText(sub, W / 2, y); }
+  y += sq ? 56 : 72;
+  ctx.font = `800 ${sq ? 34 : story ? 46 : 40}px Poppins`; const pl = wrap(ctx, o.prestasi.toUpperCase(), W - 180).slice(0, story ? 5 : sq ? 3 : 4); const lh = sq ? 44 : story ? 58 : 52;
+  ctx.fillStyle = T.card; rr(ctx, 70, y - lh + 4, W - 140, pl.length * lh + 34, 22); ctx.fill();
+  ctx.fillStyle = T.acc; pl.forEach((l, i) => ctx.fillText(l, W / 2, y + 10 + i * lh)); y += pl.length * lh + (sq ? 50 : 66);
+  const pill = [o.tingkat && 'Tingkat ' + o.tingkat.replace(/^tingkat\s*/i, ''), o.tanggal].filter(Boolean).join('  •  ');
+  if (pill) { ctx.font = `700 ${sq ? 24 : 28}px Poppins`; const pw = Math.min(W - 140, ctx.measureText(pill).width + 56); ctx.fillStyle = T.acc; rr(ctx, W / 2 - pw / 2, y - 6, pw, sq ? 48 : 56, 28); ctx.fill(); ctx.fillStyle = T.motif === 'petal' ? '#fff' : '#10223d'; ctx.textBaseline = 'middle'; ctx.fillText(pill, W / 2, y + (sq ? 18 : 22)); ctx.textBaseline = 'alphabetic'; y += sq ? 70 : 90; }
+  if (o.anggota && o.anggota.length && !sq) {
+    ctx.fillStyle = T.sub; ctx.font = `400 ${story ? 28 : 24}px Poppins`;
+    const names = o.anggota.slice(0, story ? 12 : 6).join(' · ') + (o.anggota.length > (story ? 12 : 6) ? ' · dkk.' : '');
+    wrap(ctx, names, W - 200).slice(0, story ? 5 : 3).forEach((l, i) => ctx.fillText(l, W / 2, y + i * (story ? 40 : 34)));
+  }
+  footer(ctx, W, H, T, s, story ? 130 : sq ? 80 : 92);
+}

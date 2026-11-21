@@ -3,6 +3,7 @@ import { pageRapat, pageRapatDetail } from './rapat.js';
 import { pagePublikasi, pagePublikasiDetail } from './publikasi.js';
 import { pagePengaturan } from './pengaturan.js';
 import { pageUltah, pageUltahDetail, ultahMendatang } from './ultah.js';
+import { pagePrestasi, pagePrestasiDetail } from './prestasi.js';
 import { exportPdf, printDoc, kopHtml } from './laporan.js';
 
 const root = $('#root');
@@ -10,6 +11,7 @@ const NAV = [
   ['#/', 'home', 'Beranda'],
   ['#/agenda', 'cal', 'Agenda'],
   ['#/proker', 'list', 'Program Kerja'],
+  ['#/prestasi', 'trophy', 'Prestasi'],
   ['#/rapat', 'meet', 'Rapat'],
   ['#/publikasi', 'mega', 'Publikasi'],
   ['#/ultah', 'cake', 'Ulang Tahun'],
@@ -51,6 +53,7 @@ async function render() {
   if (state.needSetup) return pageSetup();
   if (parts[0] === 'login') return pageLogin();
   const needAuth = ['rapat', 'publikasi', 'pengaturan', 'ultah'].includes(parts[0]);
+  if (parts[0] === 'prestasi' && parts[1] && !state.user) { sessionStorage.setItem('after_login', hash); location.hash = '#/login'; return; }
   if (needAuth && !state.user) { sessionStorage.setItem('after_login', hash); location.hash = '#/login'; return; }
   const active = '#/' + (parts[0] || '');
   const main = shell(active === '#/' ? '#/' : active);
@@ -61,6 +64,7 @@ async function render() {
     else if (parts[0] === 'proker') await pageProker(main);
     else if (parts[0] === 'rapat') parts[1] ? await pageRapatDetail(main, +parts[1]) : await pageRapat(main);
     else if (parts[0] === 'publikasi') parts[1] ? await pagePublikasiDetail(main, +parts[1], +parts[2]) : await pagePublikasi(main);
+    else if (parts[0] === 'prestasi') parts[1] ? await pagePrestasiDetail(main, +parts[1]) : await pagePrestasi(main);
     else if (parts[0] === 'ultah') parts[1] ? await pageUltahDetail(main, +parts[1], +parts[2]) : await pageUltah(main);
     else if (parts[0] === 'pengaturan') await pagePengaturan(main);
     else main.innerHTML = '<div class="empty">Halaman tidak ditemukan.</div>';

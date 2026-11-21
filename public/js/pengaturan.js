@@ -2,7 +2,7 @@ import { state, api, $, $$, esc, icon, toast, fail, formModal, confirmBox, pickF
 
 const FIELDS = [
   ['Identitas sekolah', [['nama_sekolah', 'Nama sekolah'], ['singkatan', 'Singkatan / sebutan'], ['alamat', 'Alamat', true], ['kota', 'Kota tempat tanda tangan'], ['tahun_ajaran', 'Tahun ajaran aktif']]],
-  ['Pejabat penanda tangan', [['kepsek_nama', 'Nama Kepala Sekolah'], ['kepsek_pangkat', 'Pangkat/Golongan'], ['kepsek_nip', 'NIP Kepala Sekolah'], ['humas_nama', 'Nama Wakasek/Koordinator Humas'], ['humas_nip', 'NIP Wakasek Humas']]],
+  ['Pejabat penanda tangan', [['kepsek_nama', 'Nama Kepala Sekolah'], ['kepsek_pangkat', 'Pangkat/Golongan'], ['kepsek_nip', 'NIP Kepala Sekolah'], ['humas_nama', 'Nama Wakasek/Koordinator Humas'], ['humas_nip', 'NIP Wakasek Humas'], ['kesiswaan_nama', 'Penanda tangan rekap prestasi (nama)'], ['kesiswaan_nip', 'NIP penanda tangan rekap prestasi'], ['kesiswaan_jabatan', 'Jabatan penanda tangan rekap prestasi']]],
   ['Media sosial & publikasi', [['instagram', 'Username Instagram (tanpa @)'], ['tiktok', 'Username TikTok (tanpa @)'], ['website', 'Website'], ['pengingat_hari', 'Pengingat publikasi (berapa hari sebelumnya)'], ['hashtag_tetap', 'Hashtag tetap di setiap caption', true]]],
 ];
 

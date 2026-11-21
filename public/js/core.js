@@ -75,7 +75,7 @@ export function formModal({ title, fields, values = {}, submitLabel = 'Simpan', 
     let input;
     if (f.type === 'select') input = `<select name="${f.name}">${f.options.map((o) => { const [val, lab] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(lab)}</option>`; }).join('')}</select>`;
     else if (f.type === 'textarea') input = `<textarea name="${f.name}" rows="${f.rows || 4}" placeholder="${esc(f.placeholder || '')}">${esc(v)}</textarea>`;
-    else input = `<input name="${f.name}" type="${f.type || 'text'}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${f.required ? 'required' : ''} ${f.min != null ? `min="${f.min}"` : ''} ${f.max != null ? `max="${f.max}"` : ''}>`;
+    else input = `<input name="${f.name}" type="${f.type || 'text'}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${f.required ? 'required' : ''} ${f.min != null ? `min="${f.min}"` : ''} ${f.max != null ? `max="${f.max}"` : ''} ${f.datalist ? `list="dl_${f.name}"` : ''}>${f.datalist ? `<datalist id="dl_${f.name}">${f.datalist.map((o) => `<option value="${esc(o)}">`).join('')}</datalist>` : ''}`;
     form.appendChild(h(`<label class="f ${f.full || f.type === 'textarea' ? 'full' : ''}">${esc(f.label)}${f.required ? ' *' : ''}${input}${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ''}</label>`));
   }
   const m = modal({
@@ -140,6 +140,7 @@ const P = {
   print: 'M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z',
   pen: 'M3 21c3-1 5-3 7-6l8-8a2 2 0 00-3-3l-8 8c-3 2-5 4-6 7z',
   out: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
+  trophy: 'M8 4h8v5a4 4 0 01-8 0zM8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M8 21h8M9 17h6v4H9z',
   cake: 'M4 21h16M5 21v-8h14v8M5 16c2 1.5 4 1.5 7 0s5-1.5 7 0M12 13V9M12 6.5a1.2 1.2 0 01-1.2-1.2C10.8 4.2 12 3 12 3s1.2 1.2 1.2 2.3A1.2 1.2 0 0112 6.5z',
 };
 export const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${P[n] || ''}"/></svg>`;

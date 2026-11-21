@@ -19,6 +19,7 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS publikasi (id INTEGER PRIMARY KEY AUTOINCREMENT, hari_id INTEGER, tahun INTEGER, tema TEXT, caption_ig TEXT, caption_tiktok TEXT, caption_twibbon TEXT, desain TEXT, twibbon_file TEXT, ig_done INTEGER DEFAULT 0, tiktok_done INTEGER DEFAULT 0, ig_link TEXT, tiktok_link TEXT, catatan TEXT, updated_at TEXT, UNIQUE(hari_id, tahun))`,
   `CREATE TABLE IF NOT EXISTS guru (id INTEGER PRIMARY KEY AUTOINCREMENT, nama TEXT, nip TEXT, tgl_lahir TEXT, jk TEXT, jabatan TEXT, agama TEXT, foto_file TEXT, aktif INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS ucapan (id INTEGER PRIMARY KEY AUTOINCREMENT, guru_id INTEGER, tahun INTEGER, gaya TEXT, pesan TEXT, caption_ig TEXT, caption_wa TEXT, desain TEXT, ig_done INTEGER DEFAULT 0, wa_done INTEGER DEFAULT 0, updated_at TEXT, UNIQUE(guru_id, tahun))`,
+  `CREATE TABLE IF NOT EXISTS prestasi (id INTEGER PRIMARY KEY AUTOINCREMENT, nama TEXT, anggota TEXT, kelas TEXT, prestasi TEXT, tingkat TEXT, tanggal TEXT, tgl TEXT, tahun INTEGER, kategori TEXT, keterangan TEXT, piagam_file TEXT, foto_file TEXT, dipublikasi INTEGER DEFAULT 0, caption TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE INDEX IF NOT EXISTS idx_hadir_rapat ON rapat_hadir(rapat_id)`,
   `CREATE INDEX IF NOT EXISTS idx_foto_rapat ON rapat_foto(rapat_id)`,
   `CREATE INDEX IF NOT EXISTS idx_agenda_tgl ON agenda(tanggal)`,
@@ -115,6 +116,9 @@ const DEFAULT_SETTINGS = {
   kop_file: '',
   logo_file: '',
   tahun_ajaran: '2026/2027',
+  kesiswaan_nama: '',
+  kesiswaan_nip: '',
+  kesiswaan_jabatan: 'Waka Kesiswaan',
 };
 
 let schemaReady = false;
@@ -277,6 +281,10 @@ async function route(req, db) {
     const tahun = +(url.searchParams.get('tahun') || new Date().getFullYear());
     const { results } = await db.prepare('SELECT id,nama,bulan,tgl,tahun,kategori,aktif FROM hari_penting').all();
     return json(hariUntukTahun(results, tahun));
+  }
+  if (p[0] === 'prestasi' && !p[1] && m === 'GET' && !(req.headers.get('authorization') || '').startsWith('Bearer ')) {
+    const { results } = await db.prepare('SELECT id,nama,anggota,kelas,prestasi,tingkat,tanggal,tgl,tahun,kategori,foto_file FROM prestasi ORDER BY tahun DESC, COALESCE(tgl, tanggal) DESC, id DESC').all();
+    return json(results);
   }
   if (p[0] === 'public' && p[1] === 'ttd' && p[2]) {
     const r = await db.prepare('SELECT id,judul,tanggal,waktu_mulai,tempat,status FROM rapat WHERE token=?').bind(p[2]).first();
@@ -457,6 +465,38 @@ async function route(req, db) {
     if (m === 'POST') { const b = await body(); if (!b.nama || !b.bulan || !b.tgl) return err('Nama, bulan, tanggal wajib.'); const d = pick(b, HP); if (!d.hashtag) d.hashtag = tagOf(d.nama); return json({ id: await insertRow(db, 'hari_penting', d) }); }
     if (m === 'PUT' && p[1]) { await updateRow(db, 'hari_penting', +p[1], pick(await body(), HP)); return json({ ok: true }); }
     if (m === 'DELETE' && p[1]) { await db.prepare('DELETE FROM hari_penting WHERE id=?').bind(+p[1]).run(); return json({ ok: true }); }
+  }
+
+  // ---------- PRESTASI SISWA ----------
+  const PR = ['nama', 'anggota', 'kelas', 'prestasi', 'tingkat', 'tanggal', 'tgl', 'tahun', 'kategori', 'keterangan', 'piagam_file', 'foto_file', 'dipublikasi', 'caption'];
+  if (p[0] === 'prestasi') {
+    if (!p[1] && m === 'GET') return json((await db.prepare('SELECT * FROM prestasi ORDER BY tahun DESC, COALESCE(tgl, tanggal) DESC, id DESC').all()).results);
+    if (p[1] === 'impor' && m === 'POST') {
+      const b = await body(); const rows = Array.isArray(b.rows) ? b.rows : [];
+      if (b.ganti) await db.prepare('DELETE FROM prestasi').run();
+      const { results: ada } = await db.prepare('SELECT lower(nama)||\'|\'||lower(prestasi)||\'|\'||COALESCE(tahun,\'\') k FROM prestasi').all();
+      const seen = new Set(ada.map((x) => x.k)); const st = []; let baru = 0, lewat = 0;
+      for (const r of rows) {
+        if (!r.nama && !r.prestasi) continue;
+        const k = `${String(r.nama || '').toLowerCase()}|${String(r.prestasi || '').toLowerCase()}|${r.tahun ?? ''}`;
+        if (seen.has(k)) { lewat++; continue; } seen.add(k); baru++;
+        const d = pick(r, PR); const ks = Object.keys(d);
+        st.push(db.prepare(`INSERT INTO prestasi (${ks.join(',')}) VALUES (${ks.map(() => '?').join(',')})`).bind(...ks.map((x) => d[x])));
+      }
+      for (let i = 0; i < st.length; i += 50) await db.batch(st.slice(i, i + 50));
+      if (b.ttd && b.ttd.nama) {
+        const cur = await getSettings(db);
+        if (!cur.kesiswaan_nama) await db.batch([db.prepare('INSERT INTO settings (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind('kesiswaan_nama', b.ttd.nama), db.prepare('INSERT INTO settings (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind('kesiswaan_nip', b.ttd.nip || '')]);
+      }
+      return json({ baru, lewat });
+    }
+    if (!p[1] && m === 'POST') { const b = await body(); if (!b.nama || !b.prestasi) return err('Nama siswa/tim dan prestasi wajib diisi.'); return json({ id: await insertRow(db, 'prestasi', pick(b, PR)) }); }
+    if (p[1] && m === 'PUT') { await updateRow(db, 'prestasi', +p[1], pick(await body(), PR)); return json({ ok: true }); }
+    if (p[1] && m === 'DELETE') {
+      const r = await db.prepare('SELECT piagam_file, foto_file FROM prestasi WHERE id=?').bind(+p[1]).first();
+      if (r) { await deleteFile(db, r.piagam_file); await deleteFile(db, r.foto_file); }
+      await db.prepare('DELETE FROM prestasi WHERE id=?').bind(+p[1]).run(); return json({ ok: true });
+    }
   }
 
   // ---------- GURU & ULANG TAHUN ----------
