@@ -188,7 +188,7 @@ export async function recordVideo(sourceCanvas, seconds = 6) {
 }
 
 export async function getImages(settings) {
-  const logo = await loadImg(settings.logo_file ? '/api/file/' + settings.logo_file : '/assets/logo-jatim.png').catch(() => null);
+  const logo = await loadImg(settings.logo_file ? '/api/file/' + settings.logo_file : '/assets/logo-sekolah.png').catch(() => null);
   return { logo };
 }
 

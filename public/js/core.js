@@ -16,7 +16,7 @@ export async function api(path, opt = {}) {
 }
 export function setToken(t) { state.token = t; if (t) localStorage.setItem('humas_token', t); else localStorage.removeItem('humas_token'); }
 export const fileUrl = (id) => (id ? '/api/file/' + id : '');
-export const logoSrc = () => (state.settings.logo_file ? fileUrl(state.settings.logo_file) : '/assets/logo-jatim.png');
+export const logoSrc = () => (state.settings.logo_file ? fileUrl(state.settings.logo_file) : '/assets/logo-sekolah.png');
 export const kopSrc = () => (state.settings.kop_file ? fileUrl(state.settings.kop_file) : '/assets/kop.png');
 
 // ---------- tanggal ----------
